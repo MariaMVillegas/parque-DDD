@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parque DDD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2b4a;--sky1:#e9f7ff;--sky2:#c9eefb}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Fredoka,"Trebuchet MS",sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--sky1),var(--sky2));}
+.app{max-width:1200px;margin:0 auto;padding:18px 20px 90px;position:relative}
+.pill{display:inline-block;border:2px solid var(--ink);border-radius:999px;background:#fff;padding:4px 14px;font:600 13px Fredoka,sans-serif;color:var(--ink)}
+header h1{font-size:clamp(34px,6vw,54px);margin:12px 0 2px;letter-spacing:-.5px}
+header p{margin:0;font-size:15px;max-width:46ch}
+.stage{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+svg{width:100%;height:auto;display:block}
+.b{cursor:pointer;transition:opacity .35s,filter .35s;outline:none}
+.b:hover .bd,.b:focus-visible .bd{transform:translateY(-4px)}
+.bd{transition:transform .2s}
+.dim{opacity:.22}
+.sel{filter:drop-shadow(0 0 7px #fff200) drop-shadow(0 0 2px #fff200)}
+.lbl text{font:700 11px Fredoka,sans-serif;fill:var(--ink);text-anchor:middle;letter-spacing:.3px}
+.card{background:#fff;border:2.5px solid var(--ink);border-radius:14px;padding:18px;box-shadow:5px 5px 0 var(--ink);position:sticky;top:16px}
+.tag{display:inline-block;background:#ffe45c;border:2px solid var(--ink);border-radius:999px;padding:2px 12px;font-weight:600;font-size:12px}
+.card h2{font-size:24px;line-height:1.1;margin:12px 0 8px}
+.card p{margin:0 0 10px;font-size:15px;line-height:1.45}
+.card ul{list-style:none;padding:0;margin:0 0 12px}
+.card li{display:flex;gap:8px;font-size:14px;line-height:1.35;margin:7px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button,.modes button,.back{font:600 13px Fredoka,sans-serif;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer;transition:background .15s,color .15s}
+.chips button:hover,.modes button:hover{background:#ffe45c}
+.modes{position:fixed;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 12px}
+.modes button.on{background:var(--ink);color:#fff}
+button:focus-visible,.b:focus-visible{outline:3px solid #ff7a66;outline-offset:2px}
+@media(max-width:860px){.stage{grid-template-columns:1fr}.card{position:static}}
+@media(prefers-reduced-motion:reduce){.b,.bd{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <a class="back pill" href="#" onclick="return false">← Inicio</a>
+  <span class="pill">Curso · Arquitectura de Software</span>
+  <h1>Parque DDD</h1>
+  <p>Dominio, puertos y adaptadores en miniatura. Toca un edificio.</p>
+</header>
+<div class="stage">
+  <svg id="map" viewBox="0 0 760 520" role="img" aria-label="Mapa isométrico del Parque DDD"></svg>
+  <aside class="card" id="card" aria-live="polite"></aside>
+</div>
+</div>
+<nav class="modes" id="modes">
+  <button data-m="explore" class="on">Explorar</button>
+  <button data-m="flow">Flujo</button>
+  <button data-m="rules">Reglas</button>
+  <button data-m="tour">Recorrido</button>
+</nav>
+
+<script>
+/* ---------- Contenido ---------- */
+const OVERVIEW={tag:'Dominio',title:'Dominio, puertos y adaptadores',
+ p:'El corazón del parque es el dominio: reglas de negocio puras. Alrededor, puertos (interfaces) y adaptadores (tecnología) lo conectan con el mundo.',
+ b:['🏰 El dominio no depende de nada externo','🔌 Los puertos los define el dominio','🚪 Los adaptadores implementan los puertos'],
+ chips:['ents','vals','aggs','repo','fact','evt','serv','port','api']};
+const D={
+ ents:{tag:'Dominio',title:'Entidades',p:'Objetos con identidad propia. Cambian con el tiempo pero siguen siendo "el mismo".',b:['🪪 Tienen un ID único','⚖️ Se comparan por identidad, no por atributos','🧠 Encapsulan reglas de negocio'],chips:['vals','aggs','repo']},
+ vals:{tag:'Dominio',title:'Objetos de valor',p:'Describen algo y no tienen identidad. Se definen por sus atributos.',b:['🧊 Son inmutables','⚖️ Dos con los mismos datos son iguales','💶 Ejemplos: Dinero, Dirección, Email'],chips:['ents','aggs']},
+ aggs:{tag:'Dominio',title:'Agregados',p:'Grupo de entidades y valores que se tratan como una unidad. La raíz del agregado es la única puerta de entrada.',b:['🛡️ Protegen invariantes de negocio','🔒 Una transacción por agregado','🔑 Se accede solo por la raíz'],chips:['ents','vals','repo']},
+ repo:{tag:'Dominio',title:'Repositorios',p:'Simulan una colección de agregados. El dominio solo conoce la interfaz.',b:['📚 Guardar, buscar y eliminar agregados','📐 Interfaz en el dominio','🗄️ Implementación en infraestructura'],chips:['aggs','port']},
+ fact:{tag:'Dominio',title:'Fábricas',p:'Construyen agregados complejos ya válidos, sin ensuciar el constructor.',b:['🏗️ Ocultan el proceso de creación','✅ Garantizan invariantes desde el inicio','🧩 Útiles cuando hay muchas piezas'],chips:['aggs','ents']},
+ evt:{tag:'Dominio',title:'Eventos de dominio',p:'Hechos importantes que ya ocurrieron. Avisan a otras partes sin acoplarlas.',b:['⏪ Se nombran en pasado: PedidoCreado','🧊 Son inmutables','📣 Otros contextos reaccionan a ellos'],chips:['aggs','port']},
+ serv:{tag:'Aplicación',title:'Servicios',p:'Orquestan los casos de uso: cargan agregados, ejecutan la lógica y guardan el resultado.',b:['🎼 Coordinan, no deciden reglas','🚫 No guardan estado','🔁 Abren y cierran la transacción'],chips:['aggs','repo','api']},
+ port:{tag:'Infraestructura',title:'Puertos y adaptadores',p:'El puerto es el contrato; el adaptador es la tecnología concreta que lo cumple.',b:['🔌 Puerto: interfaz definida por el dominio','🧰 Adaptador: base de datos, correo, mensajería','🔄 Se cambian sin tocar el dominio'],chips:['repo','evt','api']},
+ api:{tag:'Entrada',title:'API',p:'Puerta de entrada del parque. Traduce peticiones externas a casos de uso.',b:['🌐 Controladores REST o GraphQL','✂️ Validan y convierten datos','➡️ Llaman a los servicios de aplicación'],chips:['serv','port']}
+};
+const NAME={ents:'Entidades',vals:'Valores',aggs:'Agregados',repo:'Repositorios',fact:'Fábricas',evt:'Eventos',serv:'Servicios',port:'Adaptadores',api:'API'};
+const FLOW=[['api','1. Llega una petición a la API.'],['serv','2. El servicio de aplicación inicia el caso de uso.'],['repo','3. Pide el agregado al repositorio.'],['aggs','4. El agregado aplica las reglas de negocio.'],['evt','5. Se emite un evento de dominio.'],['port','6. Un adaptador guarda y notifica.']];
+const DOMAIN=['ents','vals','aggs','repo','fact','evt'];
+
+/* ---------- Isométrico ---------- */
+const S=38,OX=250,OY=150;
+const P=(x,y,z=0)=>[OX+(x-y)*S,OY+(x+y)*S/2-z];
+const pts=a=>a.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ');
+const poly=(a,f)=>`<polygon points="${pts(a)}" fill="${f}"/>`;
+function box(x,y,w,d,h,c,z0=0){
+ return poly([P(x,y+d,h+z0),P(x+w,y+d,h+z0),P(x+w,y+d,z0),P(x,y+d,z0)],c[1])
+  +poly([P(x+w,y,h+z0),P(x+w,y+d,h+z0),P(x+w,y+d,z0),P(x+w,y,z0)],c[2])
+  +poly([P(x,y,h+z0),P(x+w,y,h+z0),P(x+w,y+d,h+z0),P(x,y+d,h+z0)],c[0]);}
+function roof(x,y,w,d,z0,rh,c,o=.1){
+ const a=P(x+w/2,y+d/2,z0+rh);
+ return poly([P(x-o,y+d+o,z0),P(x+w+o,y+d+o,z0),a],c[0])+poly([P(x+w+o,y-o,z0),P(x+w+o,y+d+o,z0),a],c[1]);}
+const win=(x,y,z,w=.18,h=14)=>poly([P(x,y,z),P(x+w,y,z),P(x+w,y,z-h),P(x,y,z-h)],'#25365c');
+const house=(x,y,w,h,wall,r)=>box(x,y,w,w,h,wall)+roof(x,y,w,w,h,22,r)
+  +poly([P(x+.15,y+w,16),P(x+.45,y+w,16),P(x+.45,y+w,0),P(x+.15,y+w,0)],'#25365c');
+const W=['#fff','#e9e4dc','#d6cfc4'];
+const COL={r:'#ff7a66',y:'#ffd84d',g:'#5fe08a',b:'#5bb8ff',p:'#ff8ad0'};
+
+const items=[];
+const add=(id,cx,cy,svg,lbl)=>items.push({id,d:cx+cy,svg,lbl});
+// edificios
+add('ents',1.7,1.5,box(1.2,1,1.1,1.1,34,W)+roof(1.2,1,1.1,1.1,34,24,['#ff6a55','#e04c3a'],.2),[1.75,1.55,70,'ENTIDADES','r']);
+add('vals',2.9,4.5,house(2.3,4,1.1,32,['#fff','#f3d5e6','#e0bcd1'],['#ff5fb7','#d93f98']),[2.9,4.6,64,'VALORES','p']);
+add('aggs',5.3,1.6,
+  box(4.7,1,1.2,1.2,76,['#e6e9ff','#bcc4f2','#9da7e2'])+roof(4.7,1,1.2,1.2,76,26,['#4cc2e8','#2fa3c9'],.05)
+  +box(4.4,.8,.5,.5,52,['#e6e9ff','#bcc4f2','#9da7e2'])+roof(4.4,.8,.5,.5,52,22,['#ff6a55','#e04c3a'],.05)
+  +box(5.7,1.9,.5,.5,40,['#e6e9ff','#bcc4f2','#9da7e2'])+roof(5.7,1.9,.5,.5,40,20,['#ff6a55','#e04c3a'],.05)
+  +poly([P(5.05,2.2,26),P(5.55,2.2,26),P(5.55,2.2,0),P(5.05,2.2,0)],'#25365c'),[5.3,1.6,128,'AGREGADOS','y']);
+add('repo',7.4,1.6,house(6.9,1.1,1,32,['#fff','#e9e4dc','#d6cfc4'],['#43c46f','#2ea055']),[7.4,1.6,66,'REPOSITORIOS','g']);
+add('fact',9.4,1.6,house(8.9,1.1,1,32,['#fff','#e9e4dc','#d6cfc4'],['#ffd23f','#e6b420']),[9.4,1.6,66,'FÁBRICAS','y']);
+add('evt',5.1,4.7,`<ellipse cx="${P(5.1,4.7)[0]}" cy="${P(5.1,4.7)[1]}" rx="20" ry="9" fill="#eaf2f7"/><line x1="${P(5.1,4.7)[0]}" y1="${P(5.1,4.7)[1]}" x2="${P(5.1,4.7,56)[0]}" y2="${P(5.1,4.7,56)[1]}" stroke="#1d2b4a" stroke-width="3"/><circle class="pulse" cx="${P(5.1,4.7,60)[0]}" cy="${P(5.1,4.7,60)[1]}" r="8" fill="#ffd84d"/>`,[5.1,4.7,84,'EVENTOS','y']);
+add('serv',9.1,4.8,box(8.6,4.3,1,1,104,['#eaf7ff','#bfe3f5','#a2d3ee'])+[28,52,76].map(z=>win(8.75,5.3,z)+win(9.1,5.3,z)).join('')+roof(8.6,4.3,1,1,104,22,['#47b3e6','#2f93c8'],.05),[9.1,4.8,150,'SERVICIOS','b']);
+add('port',10.9,4.4,box(10.1,3.9,1.6,1.4,52,['#8bd0ff','#47a5e6','#3589cc'])+poly([P(11.7,4.2,40),P(11.7,5.3,40),P(11.7,5.3,8),P(11.7,4.2,8)],'#2b78bd'),[10.9,4.6,70,'ADAPTADORES','b']);
+add('api',7.9,3.9,[7.6,8.2].map(x=>box(x,3.7,.12,.12,34,['#fff','#c8d2e6','#a5b3d1'])).join('')+poly([P(7.6,3.76,34),P(8.32,3.76,34),P(8.32,3.76,26),P(7.6,3.76,26)],'#fff'),[7.95,3.8,48,'API','b']);
+// decoración sin interacción
+const trees=[[.6,.8],[3.5,.8],[11.3,.9],[11.4,2.3],[.8,5.4],[4.2,5.5],[6.6,5.5],[11,5.5],[9.5,2.6],[3.8,2.4]];
+const deco=trees.map(([x,y])=>{const p=P(x,y);return {d:x+y,svg:`<circle cx="${p[0]}" cy="${p[1]-8}" r="9" fill="#2fbf5f"/><circle cx="${p[0]-2}" cy="${p[1]-10}" r="4" fill="#58e283"/>`}});
+const pond=P(.9,4.6);
+
+function build(){
+ const slabTop=[P(0,0),P(12,0),P(12,6),P(0,6)];
+ let s=`<defs><style>.pulse{animation:pl 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes pl{50%{transform:scale(1.35)}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}</style></defs>
+ <g stroke="#1d2b4a" stroke-width="1.6" stroke-linejoin="round">
+ <polygon points="${pts([P(0,6),P(12,6),P(12,6,-16),P(0,6,-16)])}" fill="#d9a066"/>
+ <polygon points="${pts([P(12,0),P(12,6),P(12,6,-16),P(12,0,-16)])}" fill="#b9814a"/>
+ <polygon points="${pts(slabTop)}" fill="#3fd85c"/>
+ <polygon points="${pts([P(.5,2.65),P(11.2,2.65),P(11.2,3.35),P(.5,3.35)])}" fill="#f3ead9" stroke-width="1"/>
+ <polygon points="${pts([P(7.65,3.35),P(8.35,3.35),P(8.35,5.8),P(7.65,5.8)])}" fill="#f3ead9" stroke-width="1"/>
+ <polyline points="${pts([P(2,3.9),P(2,5.4),P(4,5.4),P(4,3.9)])}" fill="none" stroke="#1d7a3c" stroke-dasharray="3 4" stroke-width="3"/>
+ <polyline points="${pts([P(4.1,.4),P(6.6,.4),P(6.6,2.4)])}" fill="none" stroke="#1d7a3c" stroke-dasharray="3 4" stroke-width="3"/>
+ <ellipse cx="${pond[0]}" cy="${pond[1]}" rx="42" ry="21" fill="#4db3ff"/>
+ </g><g id="people"></g><g stroke="#1d2b4a" stroke-width="1.6" stroke-linejoin="round">`;
+ const all=[...items.map(i=>({d:i.d,svg:`<g class="b" tabindex="0" role="button" data-id="${i.id}" aria-label="${NAME[i.id]}"><g class="bd">${i.svg}</g></g>`})),...deco].sort((a,b)=>a.d-b.d);
+ s+=all.map(a=>a.svg).join('')+'</g><g class="lbl">';
+ items.forEach(i=>{const [x,y,z,t,c]=i.lbl,p=P(x,y,z),w=t.length*7.4+18;
+  s+=`<g class="lb" data-id="${i.id}" style="pointer-events:none;transition:opacity .35s"><rect x="${p[0]-w/2}" y="${p[1]-11}" width="${w}" height="22" rx="11" fill="${COL[c]}" stroke="#1d2b4a" stroke-width="1.8"/><text x="${p[0]}" y="${p[1]+4}">${t}</text></g>`});
+ s+='</g><circle id="dot" r="7" fill="#fff200" stroke="#1d2b4a" stroke-width="2" opacity="0"/>';
+ document.getElementById('map').innerHTML=s;
+}
+build();
+
+/* ---------- Personas caminando ---------- */
+const routes=[[[.7,3],[11,3]],[[8,3],[8,5.7]]];
+const cols=['#ff5fb7','#2f93c8','#ffd23f','#ff6a55','#6b5bd6','#1f9d55'];
+const people=[];
+for(let i=0;i<8;i++){const r=i<6?0:1,L=r?2.7:10.3;people.push({r,t:Math.random()*L,v:(.5+Math.random()*.5)*(i%2?1:-1),off:(i%3-1)*.18,c:cols[i%6],L});}
+const pg=document.getElementById('people');
+pg.innerHTML=people.map(p=>`<g><ellipse cx="0" cy="1" rx="5" ry="2" fill="rgba(0,0,0,.18)"/><rect x="-3" y="-11" width="6" height="10" rx="3" fill="${p.c}" stroke="#1d2b4a" stroke-width="1.2"/><circle cx="0" cy="-15" r="3.6" fill="#ffd9b0" stroke="#1d2b4a" stroke-width="1.2"/></g>`).join('');
+let last=performance.now();const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function walk(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ people.forEach((p,i)=>{if(!reduce){p.t+=p.v*dt;if(p.t>p.L)p.t=0;if(p.t<0)p.t=p.L;}
+  const [a,b]=routes[p.r],k=p.L?p.t/p.L:0,x=a[0]+(b[0]-a[0])*k,y=a[1]+(b[1]-a[1])*k;
+  const q=p.r?P(x+p.off,y):P(x,y+p.off),bob=Math.abs(Math.sin(p.t*9))*2;
+  pg.children[i].setAttribute('transform',`translate(${q[0]},${q[1]-bob})`);});
+ requestAnimationFrame(walk);}
+requestAnimationFrame(walk);
+
+/* ---------- Interacción ---------- */
+const card=document.getElementById('card'),map=document.getElementById('map');
+let mode='explore',timer=null,cur=null;
+function render(o,extra=''){card.innerHTML=`<span class="tag">${o.tag}</span><h2>${o.title}</h2><p>${o.p}</p>${extra}<ul>${o.b.map(t=>`<li><span>${t.slice(0,2)}</span><span>${t.slice(2).trim()}</span></li>`).join('')}</ul><div class="chips">${o.chips.map(c=>`<button data-go="${c}">${NAME[c]}</button>`).join('')}</div>`;}
+function focus(ids){map.querySelectorAll('.b,.lb').forEach(e=>{e.classList.toggle('dim',ids&&!ids.includes(e.dataset.id));});}
+function select(id){cur=id;
+ map.querySelectorAll('.b').forEach(e=>e.classList.toggle('sel',e.dataset.id===id));
+ if(mode==='explore'||mode==='tour'){focus(id?[id]:null);}
+ id?render(D[id]):render(OVERVIEW);
+ if(id&&mode==='explore'){map.querySelectorAll('.b').forEach(e=>e.classList.contains('sel')||e.classList.remove('dim'));focus([id,...D[id].chips]);}}
+function center(id){const i=items.find(i=>i.id===id);return P(i.lbl[0],i.lbl[1],i.lbl[2]/2);}
+function stop(){clearInterval(timer);timer=null;document.getElementById('dot').setAttribute('opacity',0);}
+function setMode(m){stop();mode=m;
+ document.querySelectorAll('.modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+ map.querySelectorAll('.b').forEach(e=>e.classList.remove('sel'));focus(null);
+ if(m==='explore'){select(null);}
+ if(m==='rules'){focus(DOMAIN);render({tag:'Regla de dependencia',title:'Todo apunta al dominio',p:'Los edificios resaltados forman el dominio. No conocen la base de datos, el framework ni la API.',b:['⬇️ Las capas externas dependen de las internas','🚫 El dominio nunca importa infraestructura','🔌 Se conectan solo mediante puertos'],chips:DOMAIN});}
+ if(m==='flow'){let i=0;const dot=document.getElementById('dot');
+  const step=()=>{const [id,txt]=FLOW[i],c=center(id);focus([id]);
+   map.querySelectorAll('.b').forEach(e=>e.classList.toggle('sel',e.dataset.id===id));
+   dot.setAttribute('cx',c[0]);dot.setAttribute('cy',c[1]);dot.setAttribute('opacity',1);
+   render({tag:'Flujo de una petición',title:NAME[id],p:txt,b:D[id].b,chips:FLOW.map(f=>f[0]).filter(f=>f!==id)});
+   i=(i+1)%FLOW.length;};
+  step();timer=setInterval(step,2800);}
+ if(m==='tour'){const ids=Object.keys(D);let i=0;const step=()=>{select(ids[i]);i=(i+1)%ids.length;};step();timer=setInterval(step,3200);}}
+document.getElementById('modes').onclick=e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m);};
+map.addEventListener('click',e=>{const b=e.target.closest('.b');if(!b)return;stop();if(mode!=='explore'){mode='explore';document.querySelectorAll('.modes button').forEach(x=>x.classList.toggle('on',x.dataset.m==='explore'));}select(b.dataset.id);});
+map.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const b=e.target.closest('.b');if(b){e.preventDefault();b.dispatchEvent(new MouseEvent('click',{bubbles:true}));}}});
+card.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;stop();mode='explore';document.querySelectorAll('.modes button').forEach(x=>x.classList.toggle('on',x.dataset.m==='explore'));select(b.dataset.go);});
+select(null);
+</script>
+</body>
+</html>
